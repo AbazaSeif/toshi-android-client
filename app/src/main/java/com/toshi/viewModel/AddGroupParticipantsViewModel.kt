@@ -100,7 +100,7 @@ class AddGroupParticipantsViewModel(val groupId: String) : ViewModel() {
 
     private fun getGroupMembers(groupId: String) = Group.fromId(groupId).map { it.members }
 
-    fun addSelectedParticipant(user: User) {
+    fun toggleSelectedParticipant(user: User) {
         if (participants.contains(user)) participants.remove(user)
         else participants.add(user)
         this.selectedParticipants.value = this.participants

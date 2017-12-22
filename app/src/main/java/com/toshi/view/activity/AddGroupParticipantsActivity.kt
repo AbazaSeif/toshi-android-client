@@ -105,7 +105,7 @@ class AddGroupParticipantsActivity : AppCompatActivity() {
 
     private fun handleUserClicked(user: User) {
         userAdapter.addOrRemoveUser(user)
-        viewModel.addSelectedParticipant(user)
+        viewModel.toggleSelectedParticipant(user)
     }
 
     private fun initObservers() {

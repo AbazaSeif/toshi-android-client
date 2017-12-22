@@ -94,7 +94,7 @@ class GroupParticipantsViewModel : ViewModel() {
         this.subscriptions.add(searchSub)
     }
 
-    fun addSelectedParticipant(user: User) {
+    fun toggleSelectedParticipant(user: User) {
         if (participants.contains(user)) participants.remove(user)
         else participants.add(user)
         this.selectedParticipants.value = this.participants
