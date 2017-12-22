@@ -89,7 +89,6 @@ public class ConversationStore {
     public void saveGroup(@NonNull final Group group) {
         copyOrUpdateGroup(group)
                 .observeOn(Schedulers.immediate())
-                .subscribeOn(Schedulers.from(dbThread))
                 .subscribe(
                         this::handleGroupSaved,
                         this::handleError
@@ -106,7 +105,6 @@ public class ConversationStore {
         return createEmptyConversation(new Recipient(group))
                 .flatMap(this::addGroupCreatedStatusMessage)
                 .observeOn(Schedulers.immediate())
-                .subscribeOn(Schedulers.from(dbThread))
                 .doOnSuccess(this::broadcastConversationChanged)
                 .doOnError(this::handleError);
     }
@@ -115,7 +113,6 @@ public class ConversationStore {
                                                      @NonNull final SofaMessage message) {
         return saveMessage(receiver, message)
                 .observeOn(Schedulers.immediate())
-                .subscribeOn(Schedulers.from(dbThread))
                 .doOnSuccess(this::broadcastConversationChanged)
                 .doOnError(throwable -> LogUtil.e(getClass(), "Error while saving message " + throwable));
     }
@@ -125,7 +122,6 @@ public class ConversationStore {
             @NonNull final SofaMessage message) {
         saveMessage(receiver, message)
         .observeOn(Schedulers.immediate())
-        .subscribeOn(Schedulers.from(dbThread))
         .subscribe(
                 this::broadcastConversationChanged,
                 this::handleError
@@ -144,7 +140,8 @@ public class ConversationStore {
             realm.close();
 
             return conversationForBroadcast;
-        });
+        })
+        .subscribeOn(Schedulers.from(dbThread));
     }
 
     private Single<Conversation> addGroupCreatedStatusMessage(@NonNull final Conversation conversation) {
@@ -186,13 +183,8 @@ public class ConversationStore {
             realm.close();
 
             return conversationForBroadcast;
-        });
-    }
-
-    @NonNull
-    private Conversation getOrCreateConversation(final User user) {
-        final Recipient recipient = new Recipient(user);
-        return getOrCreateConversation(recipient);
+        })
+        .subscribeOn(Schedulers.from(dbThread));
     }
 
     @NonNull
@@ -263,7 +255,8 @@ public class ConversationStore {
             final List<Conversation> allConversations = realm.copyFromRealm(results);
             realm.close();
             return allConversations;
-        });
+        })
+        .subscribeOn(Schedulers.from(dbThread));
     }
 
     private void broadcastConversationChanged(final Conversation conversation) {
@@ -271,7 +264,9 @@ public class ConversationStore {
     }
 
     public Single<Conversation> loadByThreadId(final String threadId) {
-        return Single.fromCallable(() -> loadWhere(THREAD_ID_FIELD, threadId));
+        return Single.fromCallable(
+            () -> loadWhere(THREAD_ID_FIELD, threadId)
+        ).subscribeOn(Schedulers.from(dbThread));
     }
 
     private Conversation loadWhere(final String fieldName, final String value) {
@@ -312,7 +307,8 @@ public class ConversationStore {
                     .deleteFromRealm();
             realm.commitTransaction();
             realm.close();
-        });
+        })
+        .subscribeOn(Schedulers.from(dbThread));
     }
 
     public Completable deleteMessageById(final Recipient receiver, final SofaMessage message) {
@@ -352,7 +348,8 @@ public class ConversationStore {
                 realm.commitTransaction();
             }
             realm.close();
-        });
+        })
+        .subscribeOn(Schedulers.from(dbThread));
     }
 
     public void removeUserFromGroup(@NotNull User user, @NotNull String groupId) {
@@ -361,7 +358,6 @@ public class ConversationStore {
                 .map(conversation -> conversation.getRecipient().getGroup())
                 .map(group -> group.removeMember(user))
                 .flatMap(this::copyOrUpdateGroup)
-                .subscribeOn(Schedulers.from(dbThread))
                 .subscribe(
                         this::broadcastConversationUpdated,
                         this::handleError
@@ -379,7 +375,6 @@ public class ConversationStore {
                                                      @NonNull final User sender,
                                                      final List<User> newUsers) {
         return loadByThreadId(groupId)
-                .subscribeOn(Schedulers.io())
                 .flatMap(conversation -> addNewGroupParticipantsStatusMessage(conversation, sender, newUsers))
                 .doOnSuccess(this::broadcastConversationUpdated)
                 .doOnError(throwable -> LogUtil.e(getClass(), "Error while creating new status message " + throwable));
@@ -422,7 +417,8 @@ public class ConversationStore {
             final SofaMessage sofaMessage = realm.copyFromRealm(result);
             realm.close();
             return sofaMessage;
-        });
+        })
+        .subscribeOn(Schedulers.from(dbThread));
     }
 
     public Single<Conversation> createEmptyConversation(final Recipient recipient) {
@@ -435,7 +431,8 @@ public class ConversationStore {
             realm.commitTransaction();
             realm.close();
             return conversation;
-        });
+        })
+        .subscribeOn(Schedulers.from(dbThread));
     }
 
     public Single<Conversation> muteConversation(final Conversation conversation, final boolean mute) {
@@ -447,7 +444,8 @@ public class ConversationStore {
             realm.commitTransaction();
             realm.close();
             return conversation;
-        });
+        })
+        .subscribeOn(Schedulers.from(dbThread));
     }
 
     public Single<Conversation> acceptConversation(final Conversation conversation) {
@@ -459,7 +457,8 @@ public class ConversationStore {
             realm.commitTransaction();
             realm.close();
             return conversation;
-        });
+        })
+        .subscribeOn(Schedulers.from(dbThread));
     }
 
     private void broadcastNewChatMessage(final String threadId, final SofaMessage newMessage) {
