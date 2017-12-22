@@ -24,7 +24,10 @@ import android.support.v4.app.Fragment
 import android.support.v7.widget.DefaultItemAnimator
 import android.support.v7.widget.LinearLayoutManager
 import android.text.Editable
+import android.text.SpannableString
+import android.text.Spanned
 import android.text.TextWatcher
+import android.text.method.LinkMovementMethod
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -32,6 +35,7 @@ import com.toshi.R
 import com.toshi.extensions.addHorizontalLineDivider
 import com.toshi.extensions.isVisible
 import com.toshi.model.local.User
+import com.toshi.util.SingleClickableSpan
 import com.toshi.view.activity.ConversationSetupActivity
 import com.toshi.view.adapter.SelectGroupParticipantAdapter
 import com.toshi.viewModel.GroupParticipantsViewModel
@@ -114,12 +118,33 @@ class GroupParticipantsFragment : Fragment() {
     private fun handleSelectedParticipants(selectedParticipants: List<User>) {
         next.isVisible(selectedParticipants.isNotEmpty())
         participants.text = getParticipantsAsString(selectedParticipants)
+        participants.movementMethod = LinkMovementMethod.getInstance()
     }
 
-    private fun getParticipantsAsString(selectedParticipants: List<User>): String {
-        return selectedParticipants.joinToString(
+    private fun getParticipantsAsString(selectedParticipants: List<User>): SpannableString {
+        val spannableString = SpannableString(selectedParticipants.joinToString(
                 separator = ", ",
                 transform = { it.displayName }
-        )
+        ))
+        var lastEndPos = 0
+        selectedParticipants.forEach { lastEndPos = createLinkSpan(spannableString, it, lastEndPos) }
+        return spannableString
+    }
+
+    private fun createLinkSpan(spannableString: SpannableString, user: User, lastEndPos: Int): Int {
+        user.displayName.let {
+            val currentStartPos = spannableString.indexOf(it, lastEndPos)
+            val currentEndPos = spannableString.indexOf(it, lastEndPos) + it.length
+            val clickableSpan = object: SingleClickableSpan() {
+                override fun onSingleClick(view: View) { userAdapter.setUsers(listOf(user)) }
+            }
+
+            spannableString.setSpan(clickableSpan,
+                    currentStartPos,
+                    currentEndPos,
+                    Spanned.SPAN_INCLUSIVE_EXCLUSIVE)
+
+            return currentEndPos
+        }
     }
 }
